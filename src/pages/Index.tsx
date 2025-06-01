@@ -1,76 +1,28 @@
 
 import { useState } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ParticleBackground } from '@/components/ParticleBackground';
-import { Header } from '@/components/Header';
-import { ChatInterface } from '@/components/ChatInterface';
-import { SettingsPanel } from '@/components/SettingsPanel';
 import { StatusBar } from '@/components/StatusBar';
+import Writer from '@/components/Writer';
+import Rephraser from '@/components/Rephraser';
+import Explainer from '@/components/Explainer';
+import Search from '@/components/Search';
 import { useAI } from '@/hooks/useAI';
-import { AIMode } from '@/types/ai';
 
 const Index = () => {
-  const [currentMode, setCurrentMode] = useState<AIMode>('writer');
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('writer');
   
   const {
-    models,
-    conversations,
-    currentConversation,
-    settings,
     systemStatus,
-    isGenerating,
-    generateResponse,
-    createConversation,
-    addMessage,
-    downloadModel,
-    updateSettings,
-    exportConversation,
+    settings,
   } = useAI();
 
-  const handleModeChange = (mode: AIMode) => {
-    setCurrentMode(mode);
-    if (!currentConversation || currentConversation.mode !== mode) {
-      createConversation(mode);
-    }
+  const modeLabels = {
+    writer: '✍️ Writer',
+    rephraser: '🔁 Rephraser',
+    explainer: '📚 Explainer',
+    search: '🔍 Search'
   };
-
-  const handleSendMessage = async (content: string) => {
-    let conversation = currentConversation;
-    if (!conversation || conversation.mode !== currentMode) {
-      conversation = createConversation(currentMode);
-    }
-
-    // Add user message
-    addMessage(conversation.id, {
-      role: 'user',
-      content,
-    });
-
-    try {
-      // Generate AI response
-      const response = await generateResponse(content, currentMode);
-      
-      // Add AI response
-      addMessage(conversation.id, {
-        role: 'assistant',
-        content: response,
-      });
-    } catch (error) {
-      console.error('Error generating response:', error);
-      addMessage(conversation.id, {
-        role: 'assistant',
-        content: 'Sorry, I encountered an error while generating a response. Please try again.',
-      });
-    }
-  };
-
-  const handleExport = (format: 'json' | 'txt' | 'csv') => {
-    if (currentConversation) {
-      exportConversation(currentConversation.id, format);
-    }
-  };
-
-  const messages = currentConversation?.messages || [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white relative overflow-hidden">
@@ -89,24 +41,48 @@ const Index = () => {
       {/* Main Layout */}
       <div className="relative z-10 flex flex-col h-screen">
         {/* Header */}
-        <Header
-          currentMode={currentMode}
-          onModeChange={handleModeChange}
-          onSettingsClick={() => setIsSettingsOpen(true)}
-          systemStatus={systemStatus}
-        />
+        <div className="fixed top-0 left-0 right-0 z-50 bg-black/20 backdrop-blur-xl border-b border-white/10">
+          <div className="container mx-auto px-6 py-4">
+            <h1 className="text-3xl font-bold gradient-text">🧠 AI Multi-Tool (Local)</h1>
+            <p className="text-gray-400 text-sm mt-1">Powered by Ollama & Llama2</p>
+          </div>
+        </div>
 
         {/* Main Content */}
-        <div className="flex-1 pt-20 pb-16">
-          <div className="container mx-auto h-full max-w-5xl">
+        <div className="flex-1 pt-24 pb-16">
+          <div className="container mx-auto h-full max-w-4xl px-6">
             <div className="h-full bg-black/20 backdrop-blur-sm rounded-3xl border border-white/10 shadow-2xl overflow-hidden">
-              <ChatInterface
-                mode={currentMode}
-                messages={messages}
-                isGenerating={isGenerating}
-                onSendMessage={handleSendMessage}
-                onExport={handleExport}
-              />
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+                <TabsList className="grid w-full grid-cols-4 bg-black/40 border-b border-white/10 rounded-none">
+                  <TabsTrigger value="writer" className="text-white data-[state=active]:bg-white/20">
+                    {modeLabels.writer}
+                  </TabsTrigger>
+                  <TabsTrigger value="rephraser" className="text-white data-[state=active]:bg-white/20">
+                    {modeLabels.rephraser}
+                  </TabsTrigger>
+                  <TabsTrigger value="explainer" className="text-white data-[state=active]:bg-white/20">
+                    {modeLabels.explainer}
+                  </TabsTrigger>
+                  <TabsTrigger value="search" className="text-white data-[state=active]:bg-white/20">
+                    {modeLabels.search}
+                  </TabsTrigger>
+                </TabsList>
+                
+                <div className="flex-1 p-6">
+                  <TabsContent value="writer" className="h-full">
+                    <Writer />
+                  </TabsContent>
+                  <TabsContent value="rephraser" className="h-full">
+                    <Rephraser />
+                  </TabsContent>
+                  <TabsContent value="explainer" className="h-full">
+                    <Explainer />
+                  </TabsContent>
+                  <TabsContent value="search" className="h-full">
+                    <Search />
+                  </TabsContent>
+                </div>
+              </Tabs>
             </div>
           </div>
         </div>
@@ -114,21 +90,10 @@ const Index = () => {
         {/* Status Bar */}
         <StatusBar
           systemStatus={systemStatus}
-          selectedModel={settings.selectedModel}
-          isGenerating={isGenerating}
+          selectedModel="llama2"
+          isGenerating={false}
         />
       </div>
-
-      {/* Settings Panel */}
-      <SettingsPanel
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        models={models}
-        settings={settings}
-        systemStatus={systemStatus}
-        onUpdateSettings={updateSettings}
-        onDownloadModel={downloadModel}
-      />
     </div>
   );
 };
